@@ -1,0 +1,204 @@
+buildscript {
+    repositories {
+        mavenCentral()
+
+        maven {
+            name 'forge'
+            url 'https://maven.minecraftforge.net/'
+        }
+        maven {
+            // GTNH ForgeGradle Fork
+            name = "GTNH Maven"
+            url = "http://jenkins.usrv.eu:8081/nexus/content/groups/public/"
+        }
+        maven {
+            name 'sonatype'
+            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+        maven {
+            name 'Scala CI dependencies'
+            url 'https://repo1.maven.org/maven2/'
+        }
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2.11'
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force 'org.eclipse.jdt:org.eclipse.jdt.core:3.12.2+' // the old version is gone again
+        }
+    }
+}
+
+plugins {
+    id 'maven-publish'
+}
+
+apply plugin: 'forge'
+
+version = new File("version.txt").getText("UTF-8").trim()
+group= "net.glease"
+archivesBaseName = "TC4RecipeLib"
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+minecraft {
+    version = "1.7.10-10.13.4.1614-1.7.10"
+}
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'glease'
+                url = 'https://maven.glease.net/repos/releases/'
+                metadataSources {
+                    artifact()
+                }
+            }
+        }
+        filter {
+            // pulls in api from azanor's repo in src jar for easy debugging, but otherwise same stuff from overmind's maven
+            includeGroup('thaumcraft_fixed')
+        }
+    }
+    maven {
+        name 'gt'
+        url 'http://gregtech.overminddl1.com/'
+    }
+    maven {
+        name 'GTNH Maven'
+        url 'http://jenkins.usrv.eu:8081/nexus/content/groups/public/'
+    }
+    maven {
+        name 'minetweaker'
+        url 'https://maven.blamejared.com/'
+    }
+}
+
+configurations {
+    create("runtimeOnlyNonPublishable") {
+        description = "Runtime only dependencies that are not published alongside the jar"
+        canBeConsumed = false
+        canBeResolved = false
+    }
+
+    create("devOnlyNonPublishable") {
+        description = "Runtime and compiletime dependencies that are not published alongside the jar (compileOnly + runtimeOnlyNonPublishable)"
+        canBeConsumed = false
+        canBeResolved = false
+    }
+
+    compileOnly.extendsFrom(devOnlyNonPublishable)
+    runtimeOnlyNonPublishable.extendsFrom(devOnlyNonPublishable)
+
+    runtimeClasspath.extendsFrom(runtimeOnlyNonPublishable)
+    testRuntimeClasspath.extendsFrom(runtimeOnlyNonPublishable)
+
+    implementation.extendsFrom(apiImplementation)
+}
+
+dependencies {
+    devOnlyNonPublishable "com.azanor.baubles:Baubles:1.7.10-1.0.1.10:deobf"
+    apiImplementation "thaumcraft_fixed:Thaumcraft:1.7.10-4.2.3.5:dev"
+    devOnlyNonPublishable "com.github.GTNewHorizons:NotEnoughItems:2.7.4-GTNH:dev"
+}
+
+javadoc {
+    source = sourceSets.main.allSource
+    failOnError = false
+    options {
+        encoding = 'utf-8'
+    }
+}
+
+tasks.register('javadocJar', Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+tasks.register('sourceJar', Jar) {
+    from sourceSets.main.allSource
+    from sourceSets.api.allSource
+    from(layout.projectDirectory) {
+        include 'COPYING'
+        include 'LICENSE*'
+    }
+    archiveClassifier = 'sources'
+}
+
+tasks.register('devJar', Jar) {
+    from sourceSets.main.output
+    from sourceSets.api.output
+    archiveClassifier = 'dev'
+}
+
+artifacts {
+    archives(devJar)
+    archives(sourceJar)
+    archives(javadocJar)
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'tc4recipelib'
+            pom {
+                name = 'TC4Tweaks'
+                description = 'A mod that adds a bit of functionality and a bit of performance into thaumcraft 4.'
+                url = 'https://github.com/Glease/TC4RecipeLib/'
+                licenses {
+                    license {
+                        name = 'GNU Lesser General Public License version 2.1 or later'
+                        url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'glee8e'
+                        name = 'glee8e'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/Glease/TC4RecipeLib.git'
+                    developerConnection = 'scm:git:https://github.com/Glease/TC4TC4RecipeLib.git'
+                    url = 'https://github.com/Glease/TC4RecipeLib/'
+                }
+            }
+
+            artifact sourceJar
+            artifact javadocJar
+            artifact devJar
+
+            repositories {
+                maven {
+                    def root = project.hasProperty('mavenRoot') ? project.mavenRoot : 'build/maven'
+                    def releasesRepoUrl = "${root}/repos/releases"
+                    def snapshotsRepoUrl = "${root}/repos/snapshots"
+                    url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                    if (project.hasProperty('mavenUser') && project.hasProperty('mavenPass')) {
+                        credentials {
+                            username project.mavenUser
+                            password project.mavenPass
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+install.dependsOn reobf
+
+idea {
+    module {
+        inheritOutputDirs = false
+        outputDir = new File(compileJava.destinationDir.parentFile.parentFile, "idea")
+        testOutputDir = new File(compileTestJava.destinationDir.parentFile.parentFile, "ideaTest")
+    }
+}
+
+compileJava.options.encoding = 'UTF-8'
