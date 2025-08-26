@@ -51,6 +51,7 @@ class Utility {
     }
 
     static RecipeIngredient convertUnderCurrentRule(ItemStack recipeSpec) {
+        if (recipeSpec == null) return RecipeIngredient.ERROR;
         return new RecipeIngredientDefer(rule.bindTo(recipeSpec));
     }
 

@@ -24,9 +24,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumChatFormatting;
 import net.minecraftforge.oredict.OreDictionary;
 import org.apache.commons.lang3.ArrayUtils;
+import thaumcraft.api.crafting.InfusionRecipe;
 
 public interface RecipeIngredient {
     /**
@@ -209,5 +212,25 @@ public interface RecipeIngredient {
             }
         };
     }
+
+    /**
+     * Special placeholder recipe ingredient that will not accept any recipe ingredient. usually found only as a result of
+     * {@link InfusionRecipeExt#convert(InfusionRecipe)}.
+     * Its representative item is a unspecified item with a display name signaling something is very wrong with the recipe
+     * It will not match any item.
+     */
+    RecipeIngredient ERROR = new RecipeIngredient() {
+        @Override
+        public List<ItemStack> getRepresentativeStacks() {
+            ItemStack error = new ItemStack(Blocks.fire);
+            error.setStackDisplayName(EnumChatFormatting.RED + "ERROR NULL INGREDIENT");
+            return Collections.singletonList(error);
+        }
+
+        @Override
+        public boolean matches(ItemStack stack) {
+            return false;
+        }
+    };
 }
 

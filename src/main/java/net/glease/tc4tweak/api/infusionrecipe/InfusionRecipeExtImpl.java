@@ -1,6 +1,8 @@
 package net.glease.tc4tweak.api.infusionrecipe;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -23,14 +25,25 @@ class InfusionRecipeExtImpl implements InfusionRecipeExt {
             .build(new CacheLoader<InfusionRecipe, EnhancedInfusionRecipe>() {
                 @Override
                 public EnhancedInfusionRecipe load(InfusionRecipe key) {
-                    // caller will ensure the instance is not one of ours
+                    // caller will ensure the instance is not already an instance of EnhancedInfusionRecipe
+                    List<RecipeIngredient> components;
+                    ItemStack[] rawComponents = key.getComponents();
+                    if (rawComponents == null) {
+                        // there are some weird/invalid recipes out in the wild
+                        // perhaps due to it being a rather special infusion or a prereq mod being missing
+                        components = Collections.emptyList();
+                    } else {
+                        components = new ArrayList<>();
+                        for (ItemStack rawComponent : rawComponents)
+                            components.add(Utility.convertUnderCurrentRule(rawComponent));
+                    }
                     return new EnhancedInfusionRecipe(
                             key.getResearch(),
                             key.getRecipeOutput(),
                             key.getInstability(),
                             key.getAspects(),
                             Utility.convertUnderCurrentRule(key.getRecipeInput()),
-                            Arrays.stream(key.getComponents()).map(Utility::convertUnderCurrentRule).collect(Collectors.toList())
+                            components
                             );
                 }
             });
