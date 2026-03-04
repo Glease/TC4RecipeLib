@@ -9,7 +9,7 @@ buildscript {
         maven {
             // GTNH ForgeGradle Fork
             name = "GTNH Maven"
-            url = "http://jenkins.usrv.eu:8081/nexus/content/groups/public/"
+            url = "https://nexus.gtnewhorizons.com/repository/public/"
         }
         maven {
             name 'sonatype'
@@ -71,7 +71,7 @@ repositories {
     }
     maven {
         name 'GTNH Maven'
-        url 'http://jenkins.usrv.eu:8081/nexus/content/groups/public/'
+        url "https://nexus.gtnewhorizons.com/repository/public/"
     }
     maven {
         name 'minetweaker'
@@ -104,7 +104,7 @@ configurations {
 dependencies {
     devOnlyNonPublishable "com.azanor.baubles:Baubles:1.7.10-1.0.1.10:deobf"
     apiImplementation "thaumcraft_fixed:Thaumcraft:1.7.10-4.2.3.5:dev"
-    devOnlyNonPublishable "com.github.GTNewHorizons:NotEnoughItems:2.7.4-GTNH:dev"
+    devOnlyNonPublishable "com.github.GTNewHorizons:NotEnoughItems:2.7.60-GTNH:dev"
 }
 
 javadoc {
@@ -175,6 +175,7 @@ publishing {
 
             repositories {
                 maven {
+                    name = 'main'
                     def root = project.hasProperty('mavenRoot') ? project.mavenRoot : 'build/maven'
                     def releasesRepoUrl = "${root}/repos/releases"
                     def snapshotsRepoUrl = "${root}/repos/snapshots"
@@ -183,6 +184,21 @@ publishing {
                         credentials {
                             username project.mavenUser
                             password project.mavenPass
+                        }
+                    }
+                }
+                if (project.hasProperty('gtnhMavenRoot')) {
+                    maven {
+                        name = 'gtnh'
+                        def root = project.hasProperty('gtnhMavenRoot') ? project.gtnhMavenRoot : 'build/maven'
+                        def releasesRepoUrl = "${root}/repository/releases"
+                        def snapshotsRepoUrl = "${root}/repository/snapshots"
+                        url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+                        if (project.hasProperty('gtnhMavenUser') && project.hasProperty('gtnhMavenPass')) {
+                            credentials {
+                                username project.gtnhMavenUser
+                                password project.gtnhMavenPass
+                            }
                         }
                     }
                 }
